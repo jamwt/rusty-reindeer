@@ -1,5 +1,17 @@
 # Rusty Reindeer
 
+An implementation of Simon Peyton-Jones's Santa-themed concurrency simulation
+from his article "Beautiful Concurrency" which originally appeared in the book
+_Beautiful Code_ in 2007.
+
+This recreation of the simulation is built using Rust and
+[Convex](https://convex.dev). Convex is a backend application platform that
+allows you to easily build sophisticated, distributed, reactive apps.
+
+A copy of SPJ's original paper is here:
+
+https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/beautiful.pdf
+
 ## From SPJ's paper, the spec
 
 > Santa repeatedly sleeps until wakened by either all of his nine reindeer, back
