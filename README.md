@@ -12,7 +12,7 @@ A copy of SPJ's original paper is here:
 
 https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/beautiful.pdf
 
-## From SPJ's paper, the spec
+## The specifications (from the paper)
 
 > Santa repeatedly sleeps until wakened by either all of his nine reindeer, back
 > from their holidays, or by a group of three of his ten elves. If awakened by
@@ -23,7 +23,10 @@ https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/beautiful.pd
 > work). Santa should give priority to the reindeer in the case that there is
 > both a group of elves and a group of reindeer waiting.
 
-## Example stdout from the paper
+## Stdout example
+
+This implementation aims to replicate the standard out from the originally
+Haskell version.
 
     Ho! Ho! Ho! let’s deliver toys
     Reindeer 8 delivering toys
@@ -40,3 +43,21 @@ https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/beautiful.pd
     Elf 3 meeting in the study
     Elf 2 meeting in the study
     Elf 1 meeting in the study
+
+## Building and running
+
+### 1. Deploy the Convex backend
+
+    $ npm i
+    $ npx convex init
+    $ npx convex deploy
+
+### 2. Grab the Convex deployment URL out of convex.json
+
+It looks something like `https://furry-bunny-111.convex.cloud`. You'll need this
+to pass to the rust app. The next step will assume this URL is in the
+`DEPLOYMENT_URL` environment variable.
+
+### 3. Run the simulation
+
+    $ cargo run -- $DEPLOYMENT_URL
