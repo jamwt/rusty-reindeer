@@ -1,0 +1,3 @@
+# Exclude from e.g. line count.
+package-lock.json
+convex/_generated
