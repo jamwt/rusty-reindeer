@@ -25,7 +25,7 @@ https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/beautiful.pd
 
 ## Stdout example
 
-This implementation aims to replicate the standard out from the originally
+This implementation aims to replicate the standard output of the original
 Haskell version.
 
     Ho! Ho! Ho! let’s deliver toys
