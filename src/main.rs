@@ -4,6 +4,23 @@ use convex::{ConvexClient, FunctionResult, Value};
 use futures::StreamExt;
 use rand::{Rng, SeedableRng};
 
+use clap::Parser;
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// Convex deployment URL
+    deployment_url: String,
+
+    /// Turn debugging logging on
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    debug: u8,
+
+    /// Clear all state before beginning the simulation
+    #[arg(short, long)]
+    reset: bool,
+}
+
 enum WorkerType {
     Reindeer,
     Elf,
@@ -46,18 +63,31 @@ impl WorkerType {
 
 #[tokio::main]
 async fn main() {
-    let deployment_url = "https://precious-bat-26.convex.cloud".to_owned();
-    tokio::spawn(santa(deployment_url.clone()));
+    let cli = Cli::parse();
+
+    if cli.reset {
+        reset(cli.deployment_url.clone()).await;
+    }
+
+    tokio::spawn(santa(cli.deployment_url.clone()));
     for _ in 0..9 {
-        tokio::spawn(worker(deployment_url.clone(), WorkerType::Reindeer));
+        tokio::spawn(worker(cli.deployment_url.clone(), WorkerType::Reindeer));
     }
     for _ in 0..10 {
-        tokio::spawn(worker(deployment_url.clone(), WorkerType::Elf));
+        tokio::spawn(worker(cli.deployment_url.clone(), WorkerType::Elf));
     }
     // Wait forever.
     loop {
         tokio::time::sleep(Duration::from_secs(1 << 30)).await;
     }
+}
+
+async fn reset(deployment_url: String) {
+    let mut convex = ConvexClient::new(&deployment_url).await.unwrap();
+    convex
+        .mutation("santa:reset", maplit::btreemap! {})
+        .await
+        .unwrap();
 }
 
 async fn santa(deployment_url: String) {

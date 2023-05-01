@@ -52,6 +52,13 @@ export const dispatchGroup = mutation(async ({ db }, { work }) => {
   }
 });
 
+export const reset = mutation(async ({ db }) => {
+  const everyone = await db.query("workers").collect();
+  for (const entity of everyone) {
+    await db.delete(entity._id);
+  }
+});
+
 const waitingReindeer = async ({
   db,
 }: {
