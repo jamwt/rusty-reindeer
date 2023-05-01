@@ -88,8 +88,7 @@ async fn santa(deployment_url: String) {
             )
             .await
             .unwrap();
-        // XXX debug
-        println!("S: done dispatching work!");
+        println!("----------");
     }
 }
 

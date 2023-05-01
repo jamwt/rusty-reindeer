@@ -1,2 +1,5 @@
 .next/
 package-lock.json
+target/
+*.rs
+*.toml

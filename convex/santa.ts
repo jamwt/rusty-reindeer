@@ -76,7 +76,10 @@ const waitingElves = async ({
   return await db
     .query("workers")
     .filter(q =>
-      q.and(q.eq(q.field("workerType"), "elves"), q.eq(q.field("working"), false))
+      q.and(
+        q.eq(q.field("workerType"), "elves"),
+        q.eq(q.field("working"), false)
+      )
     )
     .collect();
 };
