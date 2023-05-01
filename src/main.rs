@@ -16,9 +16,21 @@ struct Cli {
     #[arg(short, long, action = clap::ArgAction::Count)]
     debug: u8,
 
-    /// Clear all state before beginning the simulation
+    /// Clear all state and quit.
     #[arg(short, long)]
     reset: bool,
+
+    /// No santa
+    #[arg(short, long)]
+    no_santa: bool,
+
+    /// Number of reindeer
+    #[arg(short, long, default_value_t = 9)]
+    reindeer: u8,
+
+    /// Number of elves
+    #[arg(short, long, default_value_t = 10)]
+    elves: u8,
 }
 
 enum WorkerType {
@@ -67,13 +79,16 @@ async fn main() {
 
     if cli.reset {
         reset(cli.deployment_url.clone()).await;
+        return;
     }
 
-    tokio::spawn(santa(cli.deployment_url.clone()));
-    for _ in 0..9 {
+    if !cli.no_santa {
+        tokio::spawn(santa(cli.deployment_url.clone()));
+    }
+    for _ in 0..cli.reindeer {
         tokio::spawn(worker(cli.deployment_url.clone(), WorkerType::Reindeer));
     }
-    for _ in 0..10 {
+    for _ in 0..cli.elves {
         tokio::spawn(worker(cli.deployment_url.clone(), WorkerType::Elf));
     }
     // Wait forever.
