@@ -3,6 +3,10 @@ name = "rusty-reindeer"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "rusty-reindeer"
+path = "rust-src/main.rs"
+
 [profile.release]
 panic = "abort"
 

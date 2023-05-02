@@ -17,7 +17,7 @@ struct Cli {
     debug: u8,
 
     /// Clear all state and quit.
-    #[arg(short, long)]
+    #[arg(long)]
     reset: bool,
 
     /// No santa

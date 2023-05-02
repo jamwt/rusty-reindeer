@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.snowy {
+  background-image: url(/snow.jpg);
+}
+
+.santa {
+  max-width: 80px;
+  margin: 0 auto;
+}
+
+body {
+  background: rgb(26, 29, 39);
+}

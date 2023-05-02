@@ -1,17 +1,28 @@
 {
-  "name": "convex-search-indexer",
+  "name": "rusty-reindeer",
   "version": "0.0.0",
   "scripts": {
     "format": "prettier --write .",
     "init": "convex init",
-    "dev": "convex dev"
+    "convex-dev": "convex dev",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "convex": "^0.13.0",
+    "convex": "^0.14.0",
+    "next": "^13.3.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "typescript": "^5.0.4"
   },
   "devDependencies": {
     "@types/node": "18.14.0",
-    "prettier": "2.8.4"
+    "@types/react": "18.2.0",
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.23",
+    "prettier": "2.8.4",
+    "tailwindcss": "^3.3.2"
   }
 }

@@ -10,6 +10,7 @@
  */
 
 import type { ApiFromModules } from "convex/api";
+import type * as observer from "../observer";
 import type * as santa from "../santa";
 import type * as workers from "../workers";
 
@@ -23,6 +24,7 @@ import type * as workers from "../workers";
  * `ConvexReactClient` to create app-specific types.
  */
 export type API = ApiFromModules<{
+  observer: typeof observer;
   santa: typeof santa;
   workers: typeof workers;
 }>;
