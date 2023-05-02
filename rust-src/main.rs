@@ -1,4 +1,7 @@
-use std::time::Duration;
+use std::{
+    sync::{atomic::AtomicU64, Arc},
+    time::Duration,
+};
 
 use convex::{ConvexClient, FunctionResult, Value};
 use futures::StreamExt;
@@ -73,6 +76,16 @@ impl WorkerType {
     }
 }
 
+const MAX_MILLISECONDS: f64 = 10_000.0;
+
+fn percentile_to_ms_delay(percent: u8) -> u64 {
+    let percent = u8::max(percent, 1); // No zero percents
+
+    // Let's pick a logarithmic curve.
+    let factor = f64::log(percent as f64, 100.0);
+    u64::max((MAX_MILLISECONDS - (MAX_MILLISECONDS * factor)) as u64, 1)
+}
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
@@ -82,18 +95,49 @@ async fn main() {
         return;
     }
 
+    let max_vacation_ms = Arc::new(AtomicU64::new(percentile_to_ms_delay(50)));
+    let max_work_ms = Arc::new(AtomicU64::new(percentile_to_ms_delay(50)));
+
     if !cli.no_santa {
         tokio::spawn(santa(cli.deployment_url.clone()));
     }
     for _ in 0..cli.reindeer {
-        tokio::spawn(worker(cli.deployment_url.clone(), WorkerType::Reindeer));
+        tokio::spawn(worker(
+            cli.deployment_url.clone(),
+            WorkerType::Reindeer,
+            max_vacation_ms.clone(),
+            max_work_ms.clone(),
+        ));
     }
     for _ in 0..cli.elves {
-        tokio::spawn(worker(cli.deployment_url.clone(), WorkerType::Elf));
+        tokio::spawn(worker(
+            cli.deployment_url.clone(),
+            WorkerType::Elf,
+            max_vacation_ms.clone(),
+            max_work_ms.clone(),
+        ));
     }
-    // Wait forever.
-    loop {
-        tokio::time::sleep(Duration::from_secs(1 << 30)).await;
+
+    let mut convex = ConvexClient::new(&cli.deployment_url).await.unwrap();
+    // Wait for existing work to be done and for new group of workers to be ready!
+    let mut sub = convex
+        .subscribe("speed:getSpeeds", maplit::btreemap! {})
+        .await
+        .unwrap();
+    while let Some(result) = sub.next().await {
+        //dbg!(&result);
+        if let FunctionResult::Value(Value::Object(speeds)) = result {
+            if let Some(Value::Float64(percentage)) = speeds.get("vacationSpeed") {
+                let vacation_ms = percentile_to_ms_delay(*percentage as u8);
+                //println!("Vacation ms set to {}", vacation_ms);
+                max_vacation_ms.store(vacation_ms, std::sync::atomic::Ordering::Relaxed);
+            }
+            if let Some(Value::Float64(percentage)) = speeds.get("workSpeed") {
+                let work_ms = percentile_to_ms_delay(*percentage as u8);
+                //println!("Work ms set to {}", work_ms);
+                max_work_ms.store(work_ms, std::sync::atomic::Ordering::Relaxed);
+            }
+        }
     }
 }
 
@@ -137,7 +181,12 @@ async fn santa(deployment_url: String) {
     }
 }
 
-async fn worker(deployment_url: String, worker_type: WorkerType) {
+async fn worker(
+    deployment_url: String,
+    worker_type: WorkerType,
+    max_vacation_ms: Arc<AtomicU64>,
+    max_work_ms: Arc<AtomicU64>,
+) {
     let mut rng = rand::rngs::StdRng::from_entropy();
     let worker_id = format!("{0:x}", rng.gen::<u16>());
     let mut convex = ConvexClient::new(&deployment_url).await.unwrap();
@@ -173,7 +222,10 @@ async fn worker(deployment_url: String, worker_type: WorkerType) {
         }
         drop(sub);
         worker_type.describe_work(&worker_id);
-        tokio::time::sleep(Duration::from_millis(rng.gen_range(200..1_500))).await;
+        tokio::time::sleep(Duration::from_millis(
+            rng.gen_range(0..max_work_ms.load(std::sync::atomic::Ordering::Relaxed)),
+        ))
+        .await;
         // Done working. Let's delete our record.
         let _ = convex
             .mutation(
@@ -183,6 +235,9 @@ async fn worker(deployment_url: String, worker_type: WorkerType) {
             .await
             .unwrap();
         // Go on vacation
-        tokio::time::sleep(Duration::from_millis(rng.gen_range(700..4_000))).await;
+        tokio::time::sleep(Duration::from_millis(
+            rng.gen_range(0..max_vacation_ms.load(std::sync::atomic::Ordering::Relaxed)),
+        ))
+        .await;
     }
 }
