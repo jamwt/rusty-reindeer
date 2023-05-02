@@ -85,8 +85,8 @@ function SantaStatus({ status }: { status: StatusResponse }) {
             <p className="mt-4 text-lg leading-8 text-gray-300">
               Santa will go deliver presents with all nine reindeer when they
               are ready. Otherwise, Santa will grab any group of three waiting
-              elves to build presents together. Both reindeer and elves take extensive
-              vacation breaks, as the North Pole is cold and bleak.
+              elves to build presents together. Both reindeer and elves take
+              extensive vacation breaks, as the North Pole is cold and bleak.
             </p>
           </div>
           <dl className="mt-16 grid grid-cols-1 gap-0.5 overflow-hidden rounded-2xl text-center sm:grid-cols-2 lg:grid-cols-3">
