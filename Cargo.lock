@@ -181,9 +181,9 @@ checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
 
 [[package]]
 name = "convex"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3002774eda0c913b3ac98e3a5db2f9b719f413abe6b8ab789c3f474f155c9a2"
+checksum = "f104dcda4fbd8330e5406dde3c030e77eaae5b80b74db2411bc83eb8c07be6b4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -206,9 +206,9 @@ dependencies = [
 
 [[package]]
 name = "convex_sync_types"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f82500cbad188c89aaf9b5f9ee89d8ddc5b5aec337965e44046a1dbfa2b7d95b"
+checksum = "47491045aa5de74648ecbab4accbda16d93368201eab3422bf68b1a8875e2eb2"
 dependencies = [
  "anyhow",
  "base64",
