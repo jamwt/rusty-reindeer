@@ -27,24 +27,40 @@ export const status = query(
         reindeer: 0,
       },
       vacationing: {
-        elves: NUM_ELVES,
-        reindeer: NUM_REINDEER,
+        elves: 0,
+        reindeer: 0,
       },
     };
     for (const worker of all) {
       if (worker.workerType == "elves") {
-        response.vacationing.elves -= 1;
-        if (worker.working) {
-          response.working.elves += 1;
-        } else {
-          response.waiting.elves += 1;
+        switch (worker.state) {
+          case "ready": {
+            response.waiting.elves += 1;
+            break;
+          }
+          case "vacationing": {
+            response.vacationing.elves += 1;
+            break;
+          }
+          case "working": {
+            response.working.elves += 1;
+            break;
+          }
         }
       } else if (worker.workerType == "reindeer") {
-        response.vacationing.reindeer -= 1;
-        if (worker.working) {
-          response.working.reindeer += 1;
-        } else {
-          response.waiting.reindeer += 1;
+        switch (worker.state) {
+          case "ready": {
+            response.waiting.reindeer += 1;
+            break;
+          }
+          case "vacationing": {
+            response.vacationing.reindeer += 1;
+            break;
+          }
+          case "working": {
+            response.working.reindeer += 1;
+            break;
+          }
         }
       } else {
         throw "whaaat is this unknown worker thingie??";

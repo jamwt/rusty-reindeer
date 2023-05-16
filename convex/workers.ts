@@ -11,19 +11,27 @@ export const insertReadyWorker = mutation(
     { db }: { db: DatabaseWriter },
     { workerType }: { workerType: string }
   ) => {
-    const newId = await db.insert("workers", { workerType, working: false });
+    const newId = await db.insert("workers", { workerType, state: "ready" });
     return newId;
   }
 );
 
-export const timeToWork = query(
+export const isTimeToWork = query(
   async ({ db }: { db: DatabaseReader }, { id }: { id: Id<"workers"> }) => {
-    return (await db.get(id))!.working;
+    return (await db.get(id))!.state == "working";
   }
 );
 
-export const workDone = mutation(
+export const isTimeToVacation = query(
+  async ({ db }: { db: DatabaseReader }, { id }: { id: Id<"workers"> }) => {
+    return (await db.get(id))!.state == "vacationing";
+  }
+);
+
+export const markBackFromVacation = mutation(
   async ({ db }: { db: DatabaseWriter }, { id }: { id: Id<"workers"> }) => {
-    await db.delete(id);
+    await db.patch(id, {
+      state: "ready",
+    });
   }
 );

@@ -15,7 +15,7 @@ export const newGroupReady = query(async ({ db }): Promise<string | null> => {
   // Don't start a new work group if one is still going.
   const workersBusy = await anyoneWorking({ db });
   if (workersBusy) {
-    return null;
+    throw "Busy workers before santa said to go?";
   }
   // No one working? Do we have another workgroup?
   const reindeer = await waitingReindeer({ db });
@@ -31,13 +31,13 @@ export const newGroupReady = query(async ({ db }): Promise<string | null> => {
 
 export const dispatchGroup = mutation(async ({ db }, { work }) => {
   if (await anyoneWorking({ db })) {
-    return;
+    throw "should never try to kick off a workgroup when work is already happening";
   }
   if (work == "reindeer") {
     const reindeer = await waitingReindeer({ db });
     assert(reindeer.length === 9);
     for (const r of reindeer) {
-      await db.patch(r._id, { working: true });
+      await db.patch(r._id, { state: "working" });
     }
   } else if (work == "elves") {
     // Then, kick off elves to work.
@@ -45,10 +45,19 @@ export const dispatchGroup = mutation(async ({ db }, { work }) => {
     assert(elves.length >= 3);
     const wakeElves = elves.slice(0, 3);
     for (const e of wakeElves) {
-      await db.patch(e._id, { working: true });
+      await db.patch(e._id, { state: "working" });
     }
   } else {
     throw "Uh, what kind of job is this?";
+  }
+});
+
+export const releaseGroup = mutation(async ({ db }) => {
+  const workers = await currentWorkers({ db });
+  for (const w of workers) {
+    await db.patch(w._id, {
+      state: "vacationing",
+    });
   }
 });
 
@@ -69,7 +78,7 @@ const waitingReindeer = async ({
     .filter(q =>
       q.and(
         q.eq(q.field("workerType"), "reindeer"),
-        q.eq(q.field("working"), false)
+        q.eq(q.field("state"), "ready")
       )
     )
     .collect();
@@ -85,10 +94,22 @@ const waitingElves = async ({
     .filter(q =>
       q.and(
         q.eq(q.field("workerType"), "elves"),
-        q.eq(q.field("working"), false)
+        q.eq(q.field("state"), "ready")
       )
     )
     .collect();
+};
+
+const currentWorkers = async ({
+  db,
+}: {
+  db: DatabaseReader;
+}): Promise<Doc<"workers">[]> => {
+  const busyWorkers = await db
+    .query("workers")
+    .filter(q => q.eq(q.field("state"), "working"))
+    .collect();
+  return busyWorkers;
 };
 
 const anyoneWorking = async ({
@@ -96,9 +117,5 @@ const anyoneWorking = async ({
 }: {
   db: DatabaseReader;
 }): Promise<boolean> => {
-  const busyWorker = await db
-    .query("workers")
-    .filter(q => q.field("working"))
-    .first();
-  return busyWorker != null;
+  return (await currentWorkers({ db })).length > 0;
 };

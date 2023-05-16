@@ -12,7 +12,7 @@ panic = "abort"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-convex = "0.1.1"
+convex = "0.1.2"
 futures = "0.3"
 tokio = { features = [ "full" ], version = "1" }
 maplit = "1"

@@ -99,14 +99,13 @@ async fn main() {
     let max_work_ms = Arc::new(AtomicU64::new(percentile_to_ms_delay(50)));
 
     if !cli.no_santa {
-        tokio::spawn(santa(cli.deployment_url.clone()));
+        tokio::spawn(santa(cli.deployment_url.clone(), max_work_ms.clone()));
     }
     for _ in 0..cli.reindeer {
         tokio::spawn(worker(
             cli.deployment_url.clone(),
             WorkerType::Reindeer,
             max_vacation_ms.clone(),
-            max_work_ms.clone(),
         ));
     }
     for _ in 0..cli.elves {
@@ -114,7 +113,6 @@ async fn main() {
             cli.deployment_url.clone(),
             WorkerType::Elf,
             max_vacation_ms.clone(),
-            max_work_ms.clone(),
         ));
     }
 
@@ -149,8 +147,9 @@ async fn reset(deployment_url: String) {
         .unwrap();
 }
 
-async fn santa(deployment_url: String) {
+async fn santa(deployment_url: String, max_work_ms: Arc<AtomicU64>) {
     let mut convex = ConvexClient::new(&deployment_url).await.unwrap();
+    let mut rng = rand::rngs::StdRng::from_entropy();
     loop {
         // Wait for existing work to be done and for new group of workers to be ready!
         let mut sub = convex
@@ -178,38 +177,42 @@ async fn santa(deployment_url: String) {
             .await
             .unwrap();
         println!("----------");
+        // Let the group "work" with Santa.
+        tokio::time::sleep(Duration::from_millis(
+            rng.gen_range(0..max_work_ms.load(std::sync::atomic::Ordering::Relaxed)),
+        ))
+        .await;
+        // Release them from their duties.
+        convex
+            .mutation("santa:releaseGroup", maplit::btreemap! {})
+            .await
+            .unwrap();
     }
 }
 
-async fn worker(
-    deployment_url: String,
-    worker_type: WorkerType,
-    max_vacation_ms: Arc<AtomicU64>,
-    max_work_ms: Arc<AtomicU64>,
-) {
+async fn worker(deployment_url: String, worker_type: WorkerType, max_vacation_ms: Arc<AtomicU64>) {
     let mut rng = rand::rngs::StdRng::from_entropy();
     let worker_id = format!("{0:x}", rng.gen::<u16>());
     let mut convex = ConvexClient::new(&deployment_url).await.unwrap();
-    loop {
-        // Register ourselves as "back from vacation"
-        let result = convex
-            .mutation(
-                "workers:insertReadyWorker",
-                maplit::btreemap! {
-                    "workerType".to_owned() => Value::String(worker_type.table_name().to_owned()),
-                },
-            )
-            .await
-            .unwrap();
-        let our_id = if let FunctionResult::Value(Value::Id(our_id)) = result {
-            our_id
-        } else {
-            panic!("Not an ID back from insertReadyWorker?");
-        };
+    let result = convex
+        .mutation(
+            "workers:insertReadyWorker",
+            maplit::btreemap! {
+                "workerType".to_owned() => Value::String(worker_type.table_name().to_owned()),
+            },
+        )
+        .await
+        .unwrap();
+    let our_id = if let FunctionResult::Value(Value::Id(our_id)) = result {
+        our_id
+    } else {
+        panic!("Not an ID back from insertReadyWorker?");
+    };
 
+    loop {
         let mut sub = convex
             .subscribe(
-                "workers:timeToWork",
+                "workers:isTimeToWork",
                 maplit::btreemap! {"id".to_owned() => Value::Id(our_id.clone())},
             )
             .await
@@ -222,22 +225,33 @@ async fn worker(
         }
         drop(sub);
         worker_type.describe_work(&worker_id);
-        tokio::time::sleep(Duration::from_millis(
-            rng.gen_range(0..max_work_ms.load(std::sync::atomic::Ordering::Relaxed)),
-        ))
-        .await;
-        // Done working. Let's delete our record.
-        let _ = convex
-            .mutation(
-                "workers:workDone",
-                maplit::btreemap! {"id".to_owned() => Value::Id(our_id)},
+        // Wait until Santa releases us to go on vacation
+        let mut sub = convex
+            .subscribe(
+                "workers:isTimeToVacation",
+                maplit::btreemap! {"id".to_owned() => Value::Id(our_id.clone())},
             )
             .await
             .unwrap();
-        // Go on vacation
+        while let Some(result) = sub.next().await {
+            if let FunctionResult::Value(Value::Boolean(true)) = result {
+                break;
+            }
+        }
+
+        // Go on "vacation" by just waiting awhile to come back and register as ready.
         tokio::time::sleep(Duration::from_millis(
             rng.gen_range(0..max_vacation_ms.load(std::sync::atomic::Ordering::Relaxed)),
         ))
         .await;
+
+        // Register ourselves as "back from vacation"
+        convex
+            .mutation(
+                "workers:markBackFromVacation",
+                maplit::btreemap! {"id".to_owned() => Value::Id(our_id.clone())},
+            )
+            .await
+            .unwrap();
     }
 }
