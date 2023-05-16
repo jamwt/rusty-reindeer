@@ -151,7 +151,7 @@ async fn santa(deployment_url: String, max_work_ms: Arc<AtomicU64>) {
     let mut convex = ConvexClient::new(&deployment_url).await.unwrap();
     let mut rng = rand::rngs::StdRng::from_entropy();
     loop {
-        // Wait for existing work to be done and for new group of workers to be ready!
+        // Wait for a new group of workers to be ready!
         let mut sub = convex
             .subscribe("santa:newGroupReady", maplit::btreemap! {})
             .await

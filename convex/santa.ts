@@ -11,47 +11,53 @@ function assert(cond: boolean) {
     throw `Assertion failed`;
   }
 }
-export const newGroupReady = query(async ({ db }): Promise<string | null> => {
-  // Don't start a new work group if one is still going.
-  const workersBusy = await anyoneWorking({ db });
-  if (workersBusy) {
-    throw "Busy workers before santa said to go?";
-  }
-  // No one working? Do we have another workgroup?
-  const reindeer = await waitingReindeer({ db });
-  if (reindeer.length == 9) {
-    return "reindeer";
-  }
-  const elves = await waitingElves({ db });
-  if (elves.length >= 3) {
-    return "elves";
-  }
-  return null;
-});
-
-export const dispatchGroup = mutation(async ({ db }, { work }) => {
-  if (await anyoneWorking({ db })) {
-    throw "should never try to kick off a workgroup when work is already happening";
-  }
-  if (work == "reindeer") {
+export const newGroupReady = query(
+  async ({ db }): Promise<"reindeer" | "elves" | null> => {
+    // Don't start a new work group if one is still going.
+    const workersBusy = await anyoneWorking({ db });
+    if (workersBusy) {
+      throw "Busy workers before santa said to go?";
+    }
+    // No one working? Do we have another workgroup?
     const reindeer = await waitingReindeer({ db });
-    assert(reindeer.length === 9);
-    for (const r of reindeer) {
-      await db.patch(r._id, { state: "working" });
+    if (reindeer.length == 9) {
+      return "reindeer";
     }
-  } else if (work == "elves") {
-    // Then, kick off elves to work.
     const elves = await waitingElves({ db });
-    assert(elves.length >= 3);
-    const wakeElves = elves.slice(0, 3);
-    for (const e of wakeElves) {
-      await db.patch(e._id, { state: "working" });
+    if (elves.length >= 3) {
+      return "elves";
     }
-  } else {
-    throw "Uh, what kind of job is this?";
+    return null;
   }
-});
+);
 
+// Grab the appropriate group and mark them working.
+export const dispatchGroup = mutation(
+  async ({ db }, { work }: { work: "reindeer" | "elves" }) => {
+    if (await anyoneWorking({ db })) {
+      throw "should never try to kick off a workgroup when work is already happening";
+    }
+    if (work == "reindeer") {
+      const reindeer = await waitingReindeer({ db });
+      assert(reindeer.length === 9);
+      for (const r of reindeer) {
+        await db.patch(r._id, { state: "working" });
+      }
+    } else if (work == "elves") {
+      // Then, kick off elves to work.
+      const elves = await waitingElves({ db });
+      assert(elves.length >= 3);
+      const wakeElves = elves.slice(0, 3);
+      for (const e of wakeElves) {
+        await db.patch(e._id, { state: "working" });
+      }
+    } else {
+      throw "Uh, what kind of job is this?";
+    }
+  }
+);
+
+// Release the current workgroup. Put them on vacation.
 export const releaseGroup = mutation(async ({ db }) => {
   const workers = await currentWorkers({ db });
   for (const w of workers) {
