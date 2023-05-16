@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 export default defineSchema({
   workers: defineTable({
-    workerType: v.string(),
+    workerType: v.union(v.literal("reindeer"), v.literal("elves")),
     state: v.union(
       v.literal("ready"),
       v.literal("working"),
